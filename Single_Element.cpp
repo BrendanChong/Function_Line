@@ -256,6 +256,34 @@ extern "C"
             aFieldSensitivity(1) = tYNormal;
         }
 
+        // GEN Property field to write out theta value
+        real
+        Theta(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters)
+        {
+            return aGeometryParameters(0);
+        }
+
+        // derivative of level set function wrt parameters
+        void
+        dTheta(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            aFieldSensitivity = {{1.0}};
+        }
+
+        void
+        dTheta_dX(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            aFieldSensitivity = {{0.0, 0.0}};
+        }
+
         // Arbitrary function to test sensitivity wrt design variables and coordinates
         /* ------------------------------------------------------------------------ */
         real
@@ -321,7 +349,7 @@ extern "C"
             Vector<moris::Matrix<moris::DDRMat>> &aParameters,
             moris::fem::Field_Interpolator_Manager *aFIManager)
         {
-            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->val()(0);
+            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS2)->val()(0);
         }
 
         void
@@ -330,7 +358,27 @@ extern "C"
             Vector<moris::Matrix<moris::DDRMat>> &aParameters,
             moris::fem::Field_Interpolator_Manager *aFIManager)
         {
-            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->N();
+            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS2)->N();
+        }
+
+        void
+        Func_dQI_dADV_Exact(
+            moris::Matrix<moris::DDRMat> &aPropMatrix,
+            Vector<moris::Matrix<moris::DDRMat>> &aParameters,
+            moris::fem::Field_Interpolator_Manager *aFIManager)
+        {
+            // Theta value
+            real tTheta = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->val()(0);
+            real tC = cos(tTheta);
+            real tS = sin(tTheta);
+
+            // Coordinates
+            real tX = aFIManager->get_IP_geometry_interpolator()->valx()(0);
+            real tY = aFIManager->get_IP_geometry_interpolator()->valx()(1);
+            real tCX = cos(tX);
+            real tCY = cos(tY);
+
+            aPropMatrix = {{tCY * tC * (tC - tS) - tCX * tS * (tC + tS)}};
         }
 
         /* ------------------------------------------------------------------------ */
@@ -571,12 +619,20 @@ extern "C"
             aParameterLists.set("use_multilinear_interpolation", tUseMultilinearInterpolation);
 
             aParameterLists(GEN::PROPERTIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
+            aParameterLists.set("name", "Theta");
+            aParameterLists.set("field_function_name", "Theta");
+            aParameterLists.set("sensitivity_function_name", "dTheta");
+            aParameterLists.set("spatial_gradient_function_name", "dTheta_dX");
+            aParameterLists.set("pdv_type", "LS1");
+            aParameterLists.set("pdv_mesh_set_names", "HMR_dummy_n_p0", "HMR_dummy_c_p0", "HMR_dummy_n_p1", "HMR_dummy_c_p1");
+
+            aParameterLists(GEN::PROPERTIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
             aParameterLists.set("name", "Function");
             aParameterLists.set("field_function_name", "QI_Function");
             aParameterLists.set("sensitivity_function_name", "dQI_Function_dADV");
             aParameterLists.set("spatial_gradient_function_name", "dQI_Function_dX");
             aParameterLists.insert("theta", tThetaDV);
-            aParameterLists.set("pdv_type", "LS1");
+            aParameterLists.set("pdv_type", "LS2");
             aParameterLists.set("pdv_mesh_set_names", "HMR_dummy_n_p0", "HMR_dummy_c_p0", "HMR_dummy_n_p1", "HMR_dummy_c_p1");
         }
 
@@ -637,7 +693,12 @@ extern "C"
             aParameterLists.set("function_parameters", "1.0");
             aParameterLists.set("value_function", "Func_QI");
             aParameterLists.set("dv_derivative_functions", "Func_dQI");
-            aParameterLists.set("dv_dependencies", "LS1");
+            aParameterLists.set("dv_dependencies", "LS2");
+
+            aParameterLists(FEM::PROPERTIES).add_parameter_list();
+            aParameterLists.set("property_name", "PropdQIdADVExact");
+            aParameterLists.set("value_function", "Func_dQI_dADV_Exact");
+            aParameterLists.set("dv_dependencies", "LS2");
 
             // BC properties ---------------------------------------------------------------
 
