@@ -1,0 +1,7 @@
+Tests continuum/discrete sensitivities for evaluating the derivative of a function across the surface of a straight cut.
+
+Tests for various rotation angles with run_mesh_conv.sh
+
+Base directory tests continuum sensitivities, /old tests discrete with multilinear interpolation, and /old/linear tests discrete with linear interpolation.
+
+MATLAB script for postprocessing the results.
