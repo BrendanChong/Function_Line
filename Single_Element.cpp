@@ -831,47 +831,86 @@ extern "C"
             //------------------------------------------------------------------------------
             // fill the IQI part of the parameter list
 
+            // aParameterLists(FEM::IQI).add_parameter_list();
+            // aParameterLists.set("IQI_name", "IQINodeX");
+            // aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
+            // aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            // aParameterLists.set("leader_dv_dependencies", "DXDP");
+            // aParameterLists.set("vectorial_field_index", 0);
+            // aParameterLists.set("function_parameters", "2");
+            // if (tUsePhases)
+            // {
+            //     aParameterLists.set("phase_name", "PhaseSolid");
+            //     aParameterLists.set("neighbor_phases", "PhaseVoid");
+            //     aParameterLists.set("follower_phase_name", "PhaseVoid");
+            // }
+            // else
+            // {
+            //     aParameterLists.set("mesh_set_names", tInterface);
+            // }
+
+            // aParameterLists(FEM::IQI).add_parameter_list();
+            // aParameterLists.set("IQI_name", "IQINodeY");
+            // aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
+            // aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            // aParameterLists.set("leader_dv_dependencies", "DXDP");
+            // aParameterLists.set("vectorial_field_index", 1);
+            // aParameterLists.set("function_parameters", "2");
+            // if (tUsePhases)
+            // {
+            //     aParameterLists.set("phase_name", "PhaseSolid");
+            //     aParameterLists.set("neighbor_phases", "PhaseVoid");
+            //     aParameterLists.set("follower_phase_name", "PhaseVoid");
+            // }
+            // else
+            // {
+            //     aParameterLists.set("mesh_set_names", tInterface);
+            // }
+
+            // // input thermal energy
+            // aParameterLists(FEM::IQI).add_parameter_list();
+            // aParameterLists.set("IQI_name", "IQIPerimeter");
+            // aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            // aParameterLists.set("IQI_type", (fem::IQI_Type::VOLUME));
+            // if (tUsePhases)
+            // {
+            //     aParameterLists.set("phase_name", "PhaseSolid");
+            //     aParameterLists.set("neighbor_phases", "PhaseVoid");
+            //     aParameterLists.set("follower_phase_name", "PhaseVoid");
+            // }
+            // else
+            // {
+            //     aParameterLists.set("mesh_set_names", tInterface);
+            // }
+
             aParameterLists(FEM::IQI).add_parameter_list();
-            aParameterLists.set("IQI_name", "IQINodeX");
-            aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
-            aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            aParameterLists.set("IQI_name", "IQIdQI");
+            aParameterLists.set("IQI_type", fem::IQI_Type::DOF_SENSITIVITY);
+            aParameterLists.set("dof_quantity", "LS2");
+            aParameterLists.set("leader_dof_dependencies", "LS2");
             aParameterLists.set("leader_dv_dependencies", "DXDP");
             aParameterLists.set("vectorial_field_index", 0);
-            aParameterLists.set("function_parameters", "2");
+            aParameterLists.set("function_parameters", "1");
             if (tUsePhases)
             {
-                aParameterLists.set("phase_name", "PhaseSolid");
-                aParameterLists.set("neighbor_phases", "PhaseVoid");
-                aParameterLists.set("follower_phase_name", "PhaseVoid");
+                aParameterLists.set("leader_phase_name", "PhaseSolid");
+                aParameterLists.set("follower_phase_name", "PhaseSolid");
             }
             else
             {
-                aParameterLists.set("mesh_set_names", tInterface);
+                aParameterLists.set("mesh_set_names", tSolidPhase);
             }
 
             aParameterLists(FEM::IQI).add_parameter_list();
-            aParameterLists.set("IQI_name", "IQINodeY");
-            aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
+            aParameterLists.set("IQI_name", "IQIBulkL2ErrorSens");
+            aParameterLists.set("IQI_type", fem::IQI_Type::DOF_SENSITIVITY);
             aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            aParameterLists.set("dof_quantity", "LS2");
+            aParameterLists.set("leader_dof_dependencies", "LS2");
             aParameterLists.set("leader_dv_dependencies", "DXDP");
-            aParameterLists.set("vectorial_field_index", 1);
-            aParameterLists.set("function_parameters", "2");
-            if (tUsePhases)
-            {
-                aParameterLists.set("phase_name", "PhaseSolid");
-                aParameterLists.set("neighbor_phases", "PhaseVoid");
-                aParameterLists.set("follower_phase_name", "PhaseVoid");
-            }
-            else
-            {
-                aParameterLists.set("mesh_set_names", tInterface);
-            }
-
-            // input thermal energy
-            aParameterLists(FEM::IQI).add_parameter_list();
-            aParameterLists.set("IQI_name", "IQIPerimeter");
-            aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
-            aParameterLists.set("IQI_type", (fem::IQI_Type::VOLUME));
+            aParameterLists.set("vectorial_field_index", 0);
+            aParameterLists.set("function_parameters", "0");
+            aParameterLists.set("leader_properties", "PropdQIdADVExact,L2Check");
             if (tUsePhases)
             {
                 aParameterLists.set("phase_name", "PhaseSolid");
@@ -960,10 +999,10 @@ extern "C"
             aParameterLists.set("File_Name", std::pair<std::string, std::string>("./", tExoFile));
             aParameterLists.set("Mesh_Type", vis::VIS_Mesh_Type::STANDARD);
             aParameterLists.set("Set_Names", tAllPhases);
-            aParameterLists.set("Field_Names", "PERIMETER,DX,DY");
-            aParameterLists.set("Field_Type", "GLOBAL,NODAL,NODAL");
-            aParameterLists.set("IQI_Names", "IQIPerimeter,IQINodeX,IQINodeY");
-            aParameterLists.set("Analysis_Type", "SENSITIVITY,SENSITIVITY,SENSITIVITY");
+            aParameterLists.set("Field_Names", "DQI,L2_DQI");
+            aParameterLists.set("Field_Type", "NODAL,NODAL");
+            aParameterLists.set("IQI_Names", "IQIdQI,IQIBulkL2ErrorSens");
+            aParameterLists.set("Analysis_Type", "SENSITIVITY,SENSITIVITY");
             aParameterLists.set("Save_Frequency", 1);
             aParameterLists.set("Time_Offset", 10.0);
         }
