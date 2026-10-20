@@ -256,6 +256,83 @@ extern "C"
             aFieldSensitivity(1) = tYNormal;
         }
 
+        // Arbitrary function to test sensitivity wrt design variables and coordinates
+        /* ------------------------------------------------------------------------ */
+        real
+        QI_Function(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters)
+        {
+            real tTheta = aGeometryParameters(0);
+            real tC = cos(tTheta);
+            real tS = sin(tTheta);
+
+            // Base function: z = sin(x) + sin(y)
+            real tXV = sin(aCoordinates(0));
+            real tYV = sin(aCoordinates(1));
+
+            // Apply rotation
+            return tC * (tXV + tYV) + tS * (tXV - tYV);
+        }
+
+        // For GEN
+        void
+        dQI_Function_dADV(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            real tTheta = aGeometryParameters(0);
+            real tC = cos(tTheta);
+            real tS = sin(tTheta);
+
+            // Base function: z = sin(x) + sin(y)
+            real tXV = sin(aCoordinates(0));
+            real tYV = sin(aCoordinates(1));
+
+            // Sensitivity wrt theta
+            aFieldSensitivity(0) = -tS * (tXV + tYV) + tC * (tXV - tYV);
+        }
+
+        // For GEN
+        void
+        dQI_Function_dX(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            real tTheta = aGeometryParameters(0);
+            real tC = cos(tTheta);
+            real tS = sin(tTheta);
+
+            // Base function: z = sin(x) + sin(y)
+            real tXV = cos(aCoordinates(0));
+            real tYV = cos(aCoordinates(1));
+
+            // Apply rotation
+            aFieldSensitivity(0) = tXV * (tC + tS);
+            aFieldSensitivity(1) = tYV * (tC - tS);
+        }
+
+        // For FEM
+        void
+        Func_QI(
+            moris::Matrix<moris::DDRMat> &aPropMatrix,
+            Vector<moris::Matrix<moris::DDRMat>> &aParameters,
+            moris::fem::Field_Interpolator_Manager *aFIManager)
+        {
+            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->val()(0);
+        }
+
+        void
+        Func_dQI(
+            moris::Matrix<moris::DDRMat> &aPropMatrix,
+            Vector<moris::Matrix<moris::DDRMat>> &aParameters,
+            moris::fem::Field_Interpolator_Manager *aFIManager)
+        {
+            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->N();
+        }
+
         /* ------------------------------------------------------------------------ */
         // Phase assignement
 
@@ -492,6 +569,15 @@ extern "C"
             aParameterLists.insert("height", tHeightDV);
             aParameterLists.set("compute_sensitivities_along_edges", tUseConsistentSens);
             aParameterLists.set("use_multilinear_interpolation", tUseMultilinearInterpolation);
+
+            aParameterLists(GEN::PROPERTIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
+            aParameterLists.set("name", "Function");
+            aParameterLists.set("field_function_name", "QI_Function");
+            aParameterLists.set("sensitivity_function_name", "dQI_Function_dADV");
+            aParameterLists.set("spatial_gradient_function_name", "dQI_Function_dX");
+            aParameterLists.insert("theta", tThetaDV);
+            aParameterLists.set("pdv_type", "LS1");
+            aParameterLists.set("pdv_mesh_set_names", "HMR_dummy_n_p0", "HMR_dummy_c_p0", "HMR_dummy_n_p1", "HMR_dummy_c_p1");
         }
 
         /* ------------------------------------------------------------------------ */
@@ -545,6 +631,13 @@ extern "C"
             aParameterLists(FEM::PROPERTIES).add_parameter_list();
             aParameterLists.set("property_name", "PropOutletFlux");
             aParameterLists.set("function_parameters", "1.0");
+
+            aParameterLists(FEM::PROPERTIES).add_parameter_list();
+            aParameterLists.set("property_name", "PropQI");
+            aParameterLists.set("function_parameters", "1.0");
+            aParameterLists.set("value_function", "Func_QI");
+            aParameterLists.set("dv_derivative_functions", "Func_dQI");
+            aParameterLists.set("dv_dependencies", "LS1");
 
             // BC properties ---------------------------------------------------------------
 
