@@ -53,8 +53,8 @@ extern "C"
         // Background mesh
 
         uint tNE = 10;
-        bool tUseConsistentSens = true;
-        bool tUseMultilinearInterpolation = false;
+        bool tUseConsistentSens = false;
+        bool tUseMultilinearInterpolation = true;
 
         /* ------------------------------------------------------------------------ */
         // Geometry parameters

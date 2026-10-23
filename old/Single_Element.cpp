@@ -52,7 +52,7 @@ extern "C"
         /* ------------------------------------------------------------------------ */
         // Background mesh
 
-        uint tNE = 68;
+        uint tNE = 10;
         bool tUseConsistentSens = true;
         bool tUseMultilinearInterpolation = true;
 
@@ -60,7 +60,11 @@ extern "C"
         // Geometry parameters
 
         real tHeight = M_PI / 4.0;
-        real tWidth = M_PI / 4.0;
+        real tWidth = M_PI / 4.1;
+        uint tThetaIter = 0;
+        real tTheta = M_PI / 60.0 * (real)tThetaIter;
+        real tC = cos(tTheta);
+        real tS = sin(tTheta);
 
         /* ------------------------------------------------------------------------ */
         // loading parameters
@@ -124,6 +128,7 @@ extern "C"
         std::string tVoidPhase = "HMR_dummy_n_p1,HMR_dummy_c_p1";
         std::string tInterface = "iside_b0_0_b1_1";
         std::string tAllPhases = tSolidPhase + "," + tVoidPhase + "," + tInterface;
+        // std::string tAllPhases = tSolidPhase + "," + tVoidPhase;
 
         /* ------------------------------------------------------------------------ */
         void
@@ -147,9 +152,6 @@ extern "C"
             const Matrix<DDRMat> &aCoordinates,
             const Vector<real> &aGeometryParameters)
         {
-            real tTheta = aGeometryParameters(0);
-            real tC = cos(tTheta);
-            real tS = sin(tTheta);
             real tXNormal = tS;
             real tYNormal = -tC;
 
@@ -166,9 +168,6 @@ extern "C"
             const Matrix<DDRMat> &aCoordinates,
             const Vector<real> &aGeometryParameters)
         {
-            real tTheta = aGeometryParameters(0);
-            real tC = cos(tTheta);
-            real tS = sin(tTheta);
             real tXNormal = -tC;
             real tYNormal = -tS;
 
@@ -185,9 +184,6 @@ extern "C"
             const Matrix<DDRMat> &aCoordinates,
             const Vector<real> &aGeometryParameters)
         {
-            real tTheta = aGeometryParameters(0);
-            real tC = cos(tTheta);
-            real tS = sin(tTheta);
             real tXNormal = tC;
             real tYNormal = tS;
 
@@ -204,9 +200,6 @@ extern "C"
             const Matrix<DDRMat> &aCoordinates,
             const Vector<real> &aGeometryParameters)
         {
-            real tTheta = aGeometryParameters(0);
-            real tC = cos(tTheta);
-            real tS = sin(tTheta);
             real tXNormal = -tS;
             real tYNormal = tC;
 
@@ -214,7 +207,7 @@ extern "C"
             real tYN = tHeight;
             real tXCenter = tC * tXN - tS * tYN;
             real tYCenter = tS * tXN + tC * tYN;
-            real tCurrHeight = aGeometryParameters(1); // design variable
+            real tCurrHeight = aGeometryParameters(0); // design variable
 
             return tXNormal * (aCoordinates(0) - tXCenter) + tYNormal * (aCoordinates(1) - tYCenter) - tCurrHeight;
         }
@@ -226,7 +219,7 @@ extern "C"
             const Vector<real> &aGeometryParameters,
             Matrix<DDRMat> &aFieldSensitivity)
         {
-            aFieldSensitivity = {{0.0}};
+            aFieldSensitivity = {{}};
         }
 
         // derivative of level set function wrt parameters
@@ -236,7 +229,7 @@ extern "C"
             const Vector<real> &aGeometryParameters,
             Matrix<DDRMat> &aFieldSensitivity)
         {
-            aFieldSensitivity = {{0.0, -1.0}};
+            aFieldSensitivity = {{-1.0}};
         }
 
         void
@@ -245,15 +238,118 @@ extern "C"
             const Vector<real> &aGeometryParameters,
             Matrix<DDRMat> &aFieldSensitivity)
         {
-
-            real tTheta = aGeometryParameters(0);
-            real tC = cos(tTheta);
-            real tS = sin(tTheta);
             real tXNormal = -tS;
             real tYNormal = tC;
 
             aFieldSensitivity(0) = tXNormal;
             aFieldSensitivity(1) = tYNormal;
+        }
+
+        // GEN Property field to write out theta value
+        real
+        Theta(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters)
+        {
+            return aGeometryParameters(0);
+        }
+
+        // derivative of level set function wrt parameters
+        void
+        dTheta(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            aFieldSensitivity = {{1.0}};
+        }
+
+        void
+        dTheta_dX(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            aFieldSensitivity = {{0.0, 0.0}};
+        }
+
+        // Arbitrary function to test sensitivity wrt design variables and coordinates
+        /* ------------------------------------------------------------------------ */
+        real
+        QI_Function(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters)
+        {
+            real tX = aCoordinates(0);
+            real tY = aCoordinates(1);
+
+            // Apply inverse rotation to coordinates
+            real tXR = tC * tX + tS * tY;
+            real tYR = -tS * tX + tC * tY;
+
+            // Evaluate original function in rotated coordinates
+            return sin(tXR * tYR);
+        }
+
+        // For GEN
+        void
+        dQI_Function_dX(
+            const Matrix<DDRMat> &aCoordinates,
+            const Vector<real> &aGeometryParameters,
+            Matrix<DDRMat> &aFieldSensitivity)
+        {
+            real tX = aCoordinates(0);
+            real tY = aCoordinates(1);
+
+            // Rotated coordinates
+            real tXR = tC * tX + tS * tY;
+            real tYR = -tS * tX + tC * tY;
+
+            // Common factor
+            real tFactor = cos(tXR * tYR);
+
+            // Spatial derivatives
+            aFieldSensitivity(0) = tFactor * (tC * tYR - tS * tXR);
+
+            aFieldSensitivity(1) = tFactor * (tS * tYR + tC * tXR);
+        }
+
+        // For FEM
+        void
+        Func_QI(
+            Matrix<DDRMat> &aPropMatrix,
+            Vector<Matrix<DDRMat>> &aParameters,
+            fem::Field_Interpolator_Manager *aFIManager)
+        {
+            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->val()(0);
+        }
+
+        void
+        Func_dQI(
+            Matrix<DDRMat> &aPropMatrix,
+            Vector<Matrix<DDRMat>> &aParameters,
+            fem::Field_Interpolator_Manager *aFIManager)
+        {
+            aPropMatrix = aFIManager->get_field_interpolators_for_type(gen::PDV_Type::LS1)->N();
+        }
+
+        void
+        Func_dQI_dADV_Exact(
+            Matrix<DDRMat> &aPropMatrix,
+            Vector<Matrix<DDRMat>> &aParameters,
+            fem::Field_Interpolator_Manager *aFIManager)
+        {
+            // Coordinates
+            real tX = aFIManager->get_IP_geometry_interpolator()->valx()(0);
+            real tY = aFIManager->get_IP_geometry_interpolator()->valx()(1);
+
+            // Rotated coordinate along displacement direction
+            real tXR = tC * tX + tS * tY;
+            real tYR = -tS * tX + tC * tY;
+
+            // Sensitivity with respect to translation along
+            // [-sin(theta), cos(theta)]
+            aPropMatrix = {{tXR * cos(tXR * tYR)}};
         }
 
         /* ------------------------------------------------------------------------ */
@@ -388,11 +484,11 @@ extern "C"
             aParameterLists.set("library", tSoFile);
 
             aParameterLists(OPT::ALGORITHMS).add_parameter_list(opt::Optimization_Algorithm_Type::SWEEP);
-            aParameterLists.set("hdf5_path", "SEN_" + std::to_string(tNE) + ".hdf5");
-            aParameterLists.set("num_evaluations_per_adv", "30,1"); // sweep over theta (first ADV)
-            aParameterLists.set("finite_difference_type", "all");
+            aParameterLists.set("hdf5_path", "SEN_" + std::to_string(tNE) + "_" + std::to_string(tThetaIter) + ".hdf5");
+            aParameterLists.set("num_evaluations_per_adv", "1"); // sweep over height
+            aParameterLists.set("finite_difference_type", "none");
             aParameterLists.set("finite_difference_epsilons", tSweepFdEpsilon);
-            aParameterLists.set("finite_difference_adv_indices", "1"); // sensitivity over height
+            aParameterLists.set("finite_difference_adv_indices", "0"); // sensitivity over height
             aParameterLists.set("evaluate_objective_gradients", true);
             aParameterLists.set("evaluate_constraint_gradients", false);
         }
@@ -411,11 +507,11 @@ extern "C"
             aParameterLists.set("pattern_initial_refinement", (uint)0, (uint)0);
 
             aParameterLists(HMR::LAGRANGE_MESHES).add_parameter_list();
-            aParameterLists.set("order", 1);
+            aParameterLists.set("order", 3);
             aParameterLists.set("pattern_index", 1);
 
             aParameterLists(HMR::BSPLINE_MESHES).add_parameter_list();
-            aParameterLists.set("orders", 2);
+            aParameterLists.set("orders", 3);
             aParameterLists.set("pattern_index", 0);
         }
 
@@ -442,7 +538,7 @@ extern "C"
         GENParameterList(Module_Parameter_Lists &aParameterLists)
         {
 
-            aParameterLists.set("IQI_types", "IQIPerimeter");
+            aParameterLists.set("IQI_types", "IQIFunction");
 
             aParameterLists.set("number_of_phases", 4);
             aParameterLists.set("phase_function_name", "get_phase_index");
@@ -451,16 +547,12 @@ extern "C"
 
             // Height design variable
             Design_Variable tHeightDV(-0.1, 0.0, 0.1);
-            Design_Variable tThetaDV(0.0, M_PI / 6.0, M_PI / 2.0); // High Error
-            // Design_Variable tThetaDV(0.0, 0.273181969877373, M_PI / 2.0); // High Error
-            // Design_Variable tThetaDV(0.0, 0.462307949023247, M_PI / 2.0); // Low Error
 
             // Fixed bottom line
             aParameterLists(GEN::GEOMETRIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
             aParameterLists.set("name", "Bottom_Line");
             aParameterLists.set("field_function_name", "Bottom_Line");
-            aParameterLists.set("sensitivity_function_name", "dLine_dHeight");
-            aParameterLists.insert("theta", tThetaDV);
+            // aParameterLists.set("sensitivity_function_name", "dLine_dHeight");
             aParameterLists.set("compute_sensitivities_along_edges", tUseConsistentSens);
             aParameterLists.set("use_multilinear_interpolation", tUseMultilinearInterpolation);
 
@@ -468,8 +560,7 @@ extern "C"
             aParameterLists(GEN::GEOMETRIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
             aParameterLists.set("name", "Left_Line");
             aParameterLists.set("field_function_name", "Left_Line");
-            aParameterLists.set("sensitivity_function_name", "dLine_dHeight");
-            aParameterLists.insert("theta", tThetaDV);
+            // aParameterLists.set("sensitivity_function_name", "dLine_dHeight");
             aParameterLists.set("compute_sensitivities_along_edges", tUseConsistentSens);
             aParameterLists.set("use_multilinear_interpolation", tUseMultilinearInterpolation);
 
@@ -477,8 +568,7 @@ extern "C"
             aParameterLists(GEN::GEOMETRIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
             aParameterLists.set("name", "Right_Line");
             aParameterLists.set("field_function_name", "Right_Line");
-            aParameterLists.set("sensitivity_function_name", "dLine_dHeight");
-            aParameterLists.insert("theta", tThetaDV);
+            // aParameterLists.set("sensitivity_function_name", "dLine_dHeight");
             aParameterLists.set("compute_sensitivities_along_edges", tUseConsistentSens);
             aParameterLists.set("use_multilinear_interpolation", tUseMultilinearInterpolation);
 
@@ -488,10 +578,16 @@ extern "C"
             aParameterLists.set("field_function_name", "Top_Line");
             aParameterLists.set("sensitivity_function_name", "dTop_Line_dHeight");
             aParameterLists.set("spatial_gradient_function_name", "dTop_Line_dX");
-            aParameterLists.insert("theta", tThetaDV);
             aParameterLists.insert("height", tHeightDV);
             aParameterLists.set("compute_sensitivities_along_edges", tUseConsistentSens);
             aParameterLists.set("use_multilinear_interpolation", tUseMultilinearInterpolation);
+
+            aParameterLists(GEN::PROPERTIES).add_parameter_list(gen::Field_Type::USER_DEFINED);
+            aParameterLists.set("name", "Function");
+            aParameterLists.set("field_function_name", "QI_Function");
+            aParameterLists.set("spatial_gradient_function_name", "dQI_Function_dX");
+            aParameterLists.set("pdv_type", "LS1");
+            aParameterLists.set("pdv_mesh_set_names", "HMR_dummy_n_p0", "HMR_dummy_c_p0", "HMR_dummy_n_p1", "HMR_dummy_c_p1");
         }
 
         /* ------------------------------------------------------------------------ */
@@ -545,6 +641,18 @@ extern "C"
             aParameterLists(FEM::PROPERTIES).add_parameter_list();
             aParameterLists.set("property_name", "PropOutletFlux");
             aParameterLists.set("function_parameters", "1.0");
+
+            aParameterLists(FEM::PROPERTIES).add_parameter_list();
+            aParameterLists.set("property_name", "PropQI");
+            aParameterLists.set("function_parameters", "1.0");
+            aParameterLists.set("value_function", "Func_QI");
+            aParameterLists.set("dv_derivative_functions", "Func_dQI");
+            aParameterLists.set("dv_dependencies", "LS1");
+
+            aParameterLists(FEM::PROPERTIES).add_parameter_list();
+            aParameterLists.set("property_name", "PropdQIdADVExact");
+            aParameterLists.set("value_function", "Func_dQI_dADV_Exact");
+            // aParameterLists.set("dv_dependencies", "LS1");
 
             // BC properties ---------------------------------------------------------------
 
@@ -677,13 +785,59 @@ extern "C"
             //------------------------------------------------------------------------------
             // fill the IQI part of the parameter list
 
+            // aParameterLists(FEM::IQI).add_parameter_list();
+            // aParameterLists.set("IQI_name", "IQINodeX");
+            // aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
+            // aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            // aParameterLists.set("leader_dv_dependencies", "DXDP");
+            // aParameterLists.set("vectorial_field_index", 0);
+            // aParameterLists.set("function_parameters", "2");
+            // if (tUsePhases)
+            // {
+            //     aParameterLists.set("phase_name", "PhaseSolid");
+            //     aParameterLists.set("neighbor_phases", "PhaseVoid");
+            //     aParameterLists.set("follower_phase_name", "PhaseVoid");
+            // }
+            // else
+            // {
+            //     aParameterLists.set("mesh_set_names", tInterface);
+            // }
+
+            // aParameterLists(FEM::IQI).add_parameter_list();
+            // aParameterLists.set("IQI_name", "IQINodeY");
+            // aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
+            // aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            // aParameterLists.set("leader_dv_dependencies", "DXDP");
+            // aParameterLists.set("vectorial_field_index", 1);
+            // aParameterLists.set("function_parameters", "2");
+            // if (tUsePhases)
+            // {
+            //     aParameterLists.set("phase_name", "PhaseSolid");
+            //     aParameterLists.set("neighbor_phases", "PhaseVoid");
+            //     aParameterLists.set("follower_phase_name", "PhaseVoid");
+            // }
+            // else
+            // {
+            //     aParameterLists.set("mesh_set_names", tInterface);
+            // }
             aParameterLists(FEM::IQI).add_parameter_list();
-            aParameterLists.set("IQI_name", "IQINodeX");
-            aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
-            aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
-            aParameterLists.set("leader_dv_dependencies", "DXDP");
-            aParameterLists.set("vectorial_field_index", 0);
-            aParameterLists.set("function_parameters", "2");
+            aParameterLists.set("IQI_name", "IQIExactdQI");
+            aParameterLists.set("IQI_type", fem::IQI_Type::PROPERTY);
+            aParameterLists.set("leader_properties", "PropdQIdADVExact,Property");
+            if (tUsePhases)
+            {
+                aParameterLists.set("leader_phase_name", "PhaseSolid");
+                aParameterLists.set("follower_phase_name", "PhaseSolid");
+            }
+            else
+            {
+                aParameterLists.set("mesh_set_names", tSolidPhase);
+            }
+
+            aParameterLists(FEM::IQI).add_parameter_list();
+            aParameterLists.set("IQI_name", "IQIFunction");
+            aParameterLists.set("IQI_type", fem::IQI_Type::PROPERTY);
+            aParameterLists.set("leader_properties", "PropQI,Property");
             if (tUsePhases)
             {
                 aParameterLists.set("phase_name", "PhaseSolid");
@@ -695,29 +849,47 @@ extern "C"
                 aParameterLists.set("mesh_set_names", tInterface);
             }
 
-            aParameterLists(FEM::IQI).add_parameter_list();
-            aParameterLists.set("IQI_name", "IQINodeY");
-            aParameterLists.set("IQI_type", fem::IQI_Type::NODE_SENSITIVITY);
-            aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
-            aParameterLists.set("leader_dv_dependencies", "DXDP");
-            aParameterLists.set("vectorial_field_index", 1);
-            aParameterLists.set("function_parameters", "2");
-            if (tUsePhases)
-            {
-                aParameterLists.set("phase_name", "PhaseSolid");
-                aParameterLists.set("neighbor_phases", "PhaseVoid");
-                aParameterLists.set("follower_phase_name", "PhaseVoid");
-            }
-            else
-            {
-                aParameterLists.set("mesh_set_names", tInterface);
-            }
-
-            // input thermal energy
             aParameterLists(FEM::IQI).add_parameter_list();
             aParameterLists.set("IQI_name", "IQIPerimeter");
             aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
             aParameterLists.set("IQI_type", (fem::IQI_Type::VOLUME));
+            aParameterLists.set("leader_dv_dependencies", "LS1");
+            if (tUsePhases)
+            {
+                aParameterLists.set("phase_name", "PhaseSolid");
+                aParameterLists.set("neighbor_phases", "PhaseVoid");
+                aParameterLists.set("follower_phase_name", "PhaseVoid");
+            }
+            else
+            {
+                aParameterLists.set("mesh_set_names", tInterface);
+            }
+
+            aParameterLists(FEM::IQI).add_parameter_list();
+            aParameterLists.set("IQI_name", "IQIdQI");
+            aParameterLists.set("IQI_type", fem::IQI_Type::PDV_SENSITIVITY);
+            // aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            aParameterLists.set("leader_dv_dependencies", "LS1,DXDP");
+            aParameterLists.set("vectorial_field_index", 0);
+            aParameterLists.set("function_parameters", "0,0");
+            if (tUsePhases)
+            {
+                aParameterLists.set("leader_phase_name", "PhaseSolid");
+                aParameterLists.set("follower_phase_name", "PhaseSolid");
+            }
+            else
+            {
+                aParameterLists.set("mesh_set_names", tSolidPhase);
+            }
+
+            aParameterLists(FEM::IQI).add_parameter_list();
+            aParameterLists.set("IQI_name", "IQIBulkL2ErrorSens");
+            aParameterLists.set("IQI_type", fem::IQI_Type::PDV_SENSITIVITY);
+            aParameterLists.set("IQI_bulk_type", fem::Element_Type::SIDESET);
+            aParameterLists.set("leader_dv_dependencies", "LS1,DXDP");
+            aParameterLists.set("vectorial_field_index", 0);
+            aParameterLists.set("function_parameters", "0,0");
+            aParameterLists.set("leader_properties", "PropdQIdADVExact,L2Check");
             if (tUsePhases)
             {
                 aParameterLists.set("phase_name", "PhaseSolid");
@@ -806,10 +978,10 @@ extern "C"
             aParameterLists.set("File_Name", std::pair<std::string, std::string>("./", tExoFile));
             aParameterLists.set("Mesh_Type", vis::VIS_Mesh_Type::STANDARD);
             aParameterLists.set("Set_Names", tAllPhases);
-            aParameterLists.set("Field_Names", "PERIMETER,DX,DY");
-            aParameterLists.set("Field_Type", "GLOBAL,NODAL,NODAL");
-            aParameterLists.set("IQI_Names", "IQIPerimeter,IQINodeX,IQINodeY");
-            aParameterLists.set("Analysis_Type", "SENSITIVITY,SENSITIVITY,SENSITIVITY");
+            aParameterLists.set("Field_Names", "DQI_EXACT,DQI,L2_DQI");
+            aParameterLists.set("Field_Type", "NODAL,NODAL,GLOBAL");
+            aParameterLists.set("IQI_Names", "IQIExactdQI,IQIdQI,IQIBulkL2ErrorSens");
+            aParameterLists.set("Analysis_Type", "FORWARD,SENSITIVITY,SENSITIVITY");
             aParameterLists.set("Save_Frequency", 1);
             aParameterLists.set("Time_Offset", 10.0);
         }
