@@ -1,0 +1,9 @@
+# Ignore all files, but traverse directories for allowed source files.
+*
+!*/
+!*.cpp
+!*.m
+!*.sh
+
+# Keep this ignore configuration versioned.
+!/.gitignore
